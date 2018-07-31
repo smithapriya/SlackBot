@@ -2,9 +2,12 @@ import os
 import time
 import re
 from slackclient import SlackClient
+import weather
+import jokes
+import quotes
 
 # instantiate Slack client
-slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
+slack_client = SlackClient('xoxp-327056519360-327831754117-352065588949-215f87d01168e60005122f64221e4e01')
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
 
@@ -19,10 +22,14 @@ def parse_bot_commands(slack_events):
         If a bot command is found, this function returns a tuple of command and channel.
         If its not found, then this function returns None, None.
     """
+    starterbot_id = slack_client.api_call("auth.test")["user_id"]
     for event in slack_events:
         if event["type"] == "message" and not "subtype" in event:
+            print("Passed 1st conditional")
             user_id, message = parse_direct_mention(event["text"])
-            if user_id == starterbot_id:
+            print(user_id, " ", starterbot_id)
+            if user_id != starterbot_id:
+                print("Passed 2nd conditional")
                 return message, event["channel"]
     return None, None
 
@@ -47,7 +54,14 @@ def handle_command(command, channel):
     # This is where you start to implement more commands!
     if command.startswith(EXAMPLE_COMMAND):
         response = "Sure...write some more code then I can do that!"
-
+    if 'weather' in command:
+        response = weather.current_weather()
+        #print(response)
+    if 'joke' in command:
+        response = jokes.get_joke()
+    if 'quote' in command or 'motivation' in command:
+        response = quotes.get_quote()
+        #print(response)
     # Sends the response back to the channel
     slack_client.api_call(
         "chat.postMessage",
@@ -61,9 +75,14 @@ if __name__ == "__main__":
         print("Starter Bot connected and running!")
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
+        print(starterbot_id)
         while True:
-            command, channel = parse_bot_commands(slack_client.rtm_read())
+            userInput = slack_client.rtm_read()
+            # if userInput:
+            #    print(userInput)
+            command, channel = parse_bot_commands(userInput)
             if command:
+                print("Command Received")
                 handle_command(command, channel)
             time.sleep(RTM_READ_DELAY)
     else:
